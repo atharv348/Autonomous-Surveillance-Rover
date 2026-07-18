@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌙 Lunar Rover Ground Control</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #00ffff;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            color: #00ffff;
+            text-shadow: 0 0 10px #00ffff;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            padding: 20px;
+            height: calc(100vh - 100px);
+        }
+        
+        .video-panel {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #00ffff;
+        }
+        
+        .video-feed {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+            object-fit: contain;
+            background: #000;
+        }
+        
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .status-panel {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #00ff00;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+        }
+        
+        .status-active {
+            color: #00ff00;
+            font-weight: bold;
+        }
+        
+        .status-inactive {
+            color: #ff0000;
+            font-weight: bold;
+        }
+        
+        .controls {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #ff00ff;
+        }
+        
+        .joystick-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .btn-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            width: 200px;
+        }
+        
+        .control-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 15px;
+            font-size: 1.2em;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        
+        .control-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.8);
+        }
+        
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .stop-btn {
+            background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+        }
+        
+        .speed-control {
+            margin-top: 20px;
+        }
+        
+        .speed-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+        }
+        
+        .info-panel {
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            padding: 15px;
+            border: 2px solid #ffff00;
+        }
+        
+        .info-item {
+            margin: 8px 0;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌙 LUNAR ROVER GROUND CONTROL STATION</h1>
+        <p>AI-Powered Vision System | Real-Time Control</p>
+    </div>
+    
+    <div class="container">
+        <div class="video-panel">
+            <h2 style="margin-bottom: 10px;">📹 AI Vision Feed (YOLOv8 Detection)</h2>
+            <img src="/video_feed" class="video-feed" alt="Rover Camera Feed">
+        </div>
+        
+        <div class="control-panel">
+            <div class="status-panel">
+                <h3>📊 System Status</h3>
+                <div class="status-item">
+                    <span>ROS2 Bridge:</span>
+                    <span id="ros-status" class="status-inactive">●</span>
+                </div>
+                <div class="status-item">
+                    <span>Camera Feed:</span>
+                    <span id="camera-status" class="status-inactive">●</span>
+                </div>
+                <div class="status-item">
+                    <span>AI Detection:</span>
+                    <span id="yolo-status" class="status-inactive">●</span>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <h3>🎮 Rover Controls</h3>
+                <div class="joystick-container">
+                    <div class="btn-group">
+                        <div></div>
+                        <button class="control-btn" onmousedown="moveForward()" onmouseup="stopRover()">▲</button>
+                        <div></div>
+                        
+                        <button class="control-btn" onmousedown="turnLeft()" onmouseup="stopRover()">◄</button>
+                        <button class="control-btn stop-btn" onclick="stopRover()">■</button>
+                        <button class="control-btn" onmousedown="turnRight()" onmouseup="stopRover()">►</button>
+                        
+                        <div></div>
+                        <button class="control-btn" onmousedown="moveBackward()" onmouseup="stopRover()">▼</button>
+                        <div></div>
+                    </div>
+                    
+                    <div class="speed-control">
+                        <label>Speed: <span id="speed-value">50</span>%</label>
+                        <input type="range" id="speed-slider" class="speed-slider" min="0" max="100" value="50">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-panel">
+                <h3>ℹ️ Information</h3>
+                <div class="info-item">🚀 Linear Speed: <span id="linear-speed">0.0</span> m/s</div>
+                <div class="info-item">🔄 Angular Speed: <span id="angular-speed">0.0</span> rad/s</div>
+                <div class="info-item">⌨️ Use arrow keys or buttons</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentSpeed = 0.5;
+        
+        // Update speed from slider
+        document.getElementById('speed-slider').addEventListener('input', function(e) {
+            currentSpeed = e.target.value / 100;
+            document.getElementById('speed-value').textContent = e.target.value;
+        });
+        
+        // Control functions
+        function sendCommand(linear, angular) {
+            fetch('/control', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({linear: linear * currentSpeed, angular: angular * currentSpeed})
+            });
+            
+            document.getElementById('linear-speed').textContent = (linear * currentSpeed).toFixed(2);
+            document.getElementById('angular-speed').textContent = (angular * currentSpeed).toFixed(2);
+        }
+        
+        function moveForward() { sendCommand(1.0, 0.0); }
+        function moveBackward() { sendCommand(-1.0, 0.0); }
+        function turnLeft() { sendCommand(0.0, 1.0); }
+        function turnRight() { sendCommand(0.0, -1.0); }
+        function stopRover() { sendCommand(0.0, 0.0); }
+        
+        // Keyboard controls
+        document.addEventListener('keydown', function(e) {
+            switch(e.key) {
+                case 'ArrowUp': case 'w': moveForward(); break;
+                case 'ArrowDown': case 's': moveBackward(); break;
+                case 'ArrowLeft': case 'a': turnLeft(); break;
+                case 'ArrowRight': case 'd': turnRight(); break;
+                case ' ': stopRover(); break;
+            }
+        });
+        
+        document.addEventListener('keyup', function(e) {
+            if(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd'].includes(e.key)) {
+                stopRover();
+            }
+        });
+        
+        // Status monitoring
+        setInterval(function() {
+            fetch('/status')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('ros-status').className = data.ros_active ? 'status-active' : 'status-inactive';
+                    document.getElementById('camera-status').className = data.camera_active ? 'status-active' : 'status-inactive';
+                    document.getElementById('yolo-status').className = data.yolo_active ? 'status-active' : 'status-inactive';
+                });
+        }, 1000);
+    </script>
+</body>
+</html>

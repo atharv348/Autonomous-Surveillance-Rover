@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 Rover Ground Control Station</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(90deg, #1e3c72 0%, #2a5298 100%);
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            border-bottom: 3px solid #00d4ff;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            margin: 10px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .status-item {
+            text-align: center;
+            padding: 10px 20px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .status-item.connected {
+            border: 2px solid #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .status-item.disconnected {
+            border: 2px solid #ff0000;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+
+        .dashboard-container {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .row {
+            display: grid;
+            gap: 20px;
+        }
+
+        .row-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .row-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .row-1 {
+            grid-template-columns: 1fr;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel h2 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #00d4ff;
+            padding-bottom: 10px;
+        }
+
+        #cameraFeed {
+            width: 100%;
+            border-radius: 10px;
+            border: 2px solid #00d4ff;
+            background: #000;
+            min-height: 300px;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+            max-width: 350px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .control-btn {
+            padding: 20px;
+            font-size: 1.5em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.5);
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        .control-btn.forward {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .control-btn.left {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .control-btn.stop {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        .control-btn.right {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            grid-column: 3;
+            grid-row: 2;
+        }
+
+        .control-btn.backward {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            grid-column: 2;
+            grid-row: 3;
+        }
+
+        .control-label {
+            text-align: center;
+            margin-top: 15px;
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .sensor-data {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .sensor-value {
+            background: rgba(0, 212, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #00d4ff;
+        }
+
+        .sensor-label {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .sensor-number {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        #lidarPlot {
+            width: 100%;
+            height: 400px;
+        }
+
+        #liveMap {
+            width: 100%;
+            height: 400px;
+            border-radius: 10px;
+            border: 2px solid #00d4ff;
+        }
+
+        .ai-detections {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        .detection-item {
+            background: rgba(0, 255, 0, 0.1);
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 4px solid #00ff00;
+        }
+
+        .mode-toggle-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            min-width: 220px;
+        }
+
+        .mode-toggle-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .mode-toggle-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.5);
+        }
+
+        .mode-toggle-btn.manual {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 4px 15px rgba(240, 147, 251, 0.4);
+        }
+
+        .mode-toggle-btn.manual:hover {
+            box-shadow: 0 6px 20px rgba(240, 147, 251, 0.6);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #00d4ff;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 ROVER GROUND CONTROL STATION</h1>
+        <p>Advanced Autonomous Navigation & AI Detection System</p>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-item" id="rosStatus">
+            <div class="sensor-label">ROS2 Connection</div>
+            <div class="sensor-number">🔴 DISCONNECTED</div>
+        </div>
+        <div class="status-item" id="aiStatus">
+            <div class="sensor-label">AI Vision</div>
+            <div class="sensor-number">⚪ STANDBY</div>
+        </div>
+        <div class="status-item">
+            <div class="sensor-label">System Time</div>
+            <div class="sensor-number" id="systemTime">--:--:--</div>
+        </div>
+        <div class="status-item" id="modeStatus">
+            <div class="sensor-label">Control Mode</div>
+            <div class="sensor-number">🤖 AUTONOMOUS</div>
+        </div>
+        <div class="status-item">
+            <button id="modeToggle" class="mode-toggle-btn" onclick="toggleMode()">
+                Switch to Manual
+            </button>
+        </div>
+    </div>
+
+    <div class="dashboard-container">
+        <div class="row row-3">
+            <div class="panel">
+                <h2>📹 Camera Feed & AI Detection</h2>
+                <img id="cameraFeed" alt="Camera feed will appear here">
+                <div class="sensor-data">
+                    <div class="sensor-value">
+                        <div class="sensor-label">Detections</div>
+                        <div class="sensor-number" id="detectionCount">0</div>
+                    </div>
+                    <div class="sensor-value">
+                        <div class="sensor-label">FPS</div>
+                        <div class="sensor-number" id="fps">30</div>
+                    </div>
+                </div>
+                <div class="ai-detections" id="detectionsList"></div>
+            </div>
+
+            <div class="panel">
+                <h2>🎮 Manual Control</h2>
+                <div class="controls">
+                    <button class="control-btn forward" onclick="sendCommand('forward')">▲<br>FORWARD</button>
+                    <button class="control-btn left" onclick="sendCommand('left')">◄<br>LEFT</button>
+                    <button class="control-btn stop" onclick="sendCommand('stop')">⬛<br>STOP</button>
+                    <button class="control-btn right" onclick="sendCommand('right')">►<br>RIGHT</button>
+                    <button class="control-btn backward" onclick="sendCommand('backward')">▼<br>BACKWARD</button>
+                </div>
+                <div class="control-label">Use arrow keys for keyboard control<br>Space bar to stop</div>
+            </div>
+
+            <div class="panel">
+                <h2>📍 Odometry</h2>
+                <div class="sensor-data">
+                    <div class="sensor-value">
+                        <div class="sensor-label">Position X (m)</div>
+                        <div class="sensor-number" id="posX">0.00</div>
+                    </div>
+                    <div class="sensor-value">
+                        <div class="sensor-label">Position Y (m)</div>
+                        <div class="sensor-number" id="posY">0.00</div>
+                    </div>
+                    <div class="sensor-value">
+                        <div class="sensor-label">Linear Vel (m/s)</div>
+                        <div class="sensor-number" id="velLinear">0.00</div>
+                    </div>
+                    <div class="sensor-value">
+                        <div class="sensor-label">Angular Vel (rad/s)</div>
+                        <div class="sensor-number" id="velAngular">0.00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row row-3">
+            <div class="panel">
+                <h2>🧭 IMU (9-Axis Sensor)</h2>
+                <div class="sensor-data">
+                    <div class="sensor-value">
+                        <div class="sensor-label">Roll</div>
+                        <div class="sensor-number" id="roll">0.0°</div>
+                    </div>
+                    <div class="sensor-value">
+                        <div class="sensor-label">Pitch</div>
+                        <div class="sensor-number" id="pitch">0.0°</div>
+                    </div>
+                    <div class="sensor-value">
+                        <div class="sensor-label">Yaw</div>
+                        <div class="sensor-number" id="yaw">0.0°</div>
+                    </div>
+                    <div class="sensor-value">
+                        <div class="sensor-label">Acceleration (m/s²)</div>
+                        <div class="sensor-number" id="accel">0.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>🛰️ GPS Location</h2>
+                <div class="sensor-data">
+                    <div class="sensor-value">
+                        <div class="sensor-label">Latitude</div>
+                        <div class="sensor-number" id="gpsLat">0.000000</div>
+                    </div>
+                    <div class="sensor-value">
+                        <div class="sensor-label">Longitude</div>
+                        <div class="sensor-number" id="gpsLon">0.000000</div>
+                    </div>
+                    <div class="sensor-value">
+                        <div class="sensor-label">Altitude (m)</div>
+                        <div class="sensor-number" id="gpsAlt">0.0</div>
+                    </div>
+                    <div class="sensor-value">
+                        <div class="sensor-label">GPS Status</div>
+                        <div class="sensor-number" id="gpsStatus">🟡 WAITING</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>🟡 Ultrasonic Sensors (HC-SR04)</h2>
+                <div class="sensor-data">
+                    <div class="sensor-value">
+                        <div class="sensor-label">Front</div>
+                        <div class="sensor-number" id="ultraFront">0 cm</div>
+                    </div>
+                    <div class="sensor-value">
+                        <div class="sensor-label">Back</div>
+                        <div class="sensor-number" id="ultraBack">0 cm</div>
+                    </div>
+                    <div class="sensor-value">
+                        <div class="sensor-label">Left</div>
+                        <div class="sensor-number" id="ultraLeft">0 cm</div>
+                    </div>
+                    <div class="sensor-value">
+                        <div class="sensor-label">Right</div>
+                        <div class="sensor-number" id="ultraRight">0 cm</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row row-1">
+            <div class="panel">
+                <h2>🔴 LiDAR Scan (360° Polar Plot)</h2>
+                <div id="lidarPlot"></div>
+            </div>
+        </div>
+
+        <div class="row row-1">
+            <div class="panel">
+                <h2>🗺️ Live GPS Location Map</h2>
+                <div id="liveMap"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io();
+        let map, marker, pathLine, pathCoordinates = [];
+        
+        function initMap() {
+            map = L.map('liveMap').setView([0, 0], 2);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+            marker = L.marker([0, 0], {
+                icon: L.divIcon({
+                    className: 'rover-marker',
+                    html: '<div style="background: #00d4ff; width: 20px; height: 20px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px #00d4ff;"></div>',
+                    iconSize: [20, 20]
+                })
+            }).addTo(map);
+            pathLine = L.polyline([], {color: '#00d4ff', weight: 3}).addTo(map);
+        }
+        initMap();
+        
+        socket.on('connect', () => {
+            document.getElementById('rosStatus').className = 'status-item connected';
+            document.getElementById('rosStatus').querySelector('.sensor-number').innerHTML = '🟢 CONNECTED';
+        });
+
+        socket.on('disconnect', () => {
+            document.getElementById('rosStatus').className = 'status-item disconnected';
+            document.getElementById('rosStatus').querySelector('.sensor-number').innerHTML = '🔴 DISCONNECTED';
+        });
+
+        socket.on('camera_frame', (data) => {
+            document.getElementById('cameraFeed').src = 'data:image/jpeg;base64,' + data.image;
+            if (data.detections && data.detections.length > 0) {
+                document.getElementById('aiStatus').querySelector('.sensor-number').innerHTML = '🟢 ACTIVE';
+                document.getElementById('detectionCount').textContent = data.detections.length;
+                let html = '';
+                data.detections.forEach(det => {
+                    html += `<div class="detection-item"><strong>${det.class}</strong> - Confidence: ${(det.confidence * 100).toFixed(1)}%</div>`;
+                });
+                document.getElementById('detectionsList').innerHTML = html;
+            } else {
+                document.getElementById('aiStatus').querySelector('.sensor-number').innerHTML = '⚪ STANDBY';
+            }
+        });
+
+        socket.on('odom_update', (data) => {
+            document.getElementById('posX').textContent = data.position.x.toFixed(2);
+            document.getElementById('posY').textContent = data.position.y.toFixed(2);
+            document.getElementById('velLinear').textContent = data.velocity.linear.toFixed(2);
+            document.getElementById('velAngular').textContent = data.velocity.angular.toFixed(2);
+        });
+
+        socket.on('imu_update', (data) => {
+            document.getElementById('roll').textContent = data.orientation.roll.toFixed(1) + '°';
+            document.getElementById('pitch').textContent = data.orientation.pitch.toFixed(1) + '°';
+            document.getElementById('yaw').textContent = data.orientation.yaw.toFixed(1) + '°';
+            const accel = Math.sqrt(data.linear_acceleration.x**2 + data.linear_acceleration.y**2 + data.linear_acceleration.z**2);
+            document.getElementById('accel').textContent = accel.toFixed(2);
+        });
+
+        socket.on('gps_update', (data) => {
+            document.getElementById('gpsLat').textContent = data.latitude.toFixed(6);
+            document.getElementById('gpsLon').textContent = data.longitude.toFixed(6);
+            document.getElementById('gpsAlt').textContent = data.altitude.toFixed(1);
+            const statusText = data.status === 0 ? '🟢 FIX' : '🔴 NO FIX';
+            document.getElementById('gpsStatus').textContent = statusText;
+            if (data.latitude !== 0 && data.longitude !== 0) {
+                const newPos = [data.latitude, data.longitude];
+                marker.setLatLng(newPos);
+                map.setView(newPos, 18);
+                pathCoordinates.push(newPos);
+                pathLine.setLatLngs(pathCoordinates);
+            }
+        });
+
+        socket.on('ultrasonic_update', (data) => {
+            document.getElementById('ultraFront').textContent = data.front.toFixed(1) + ' cm';
+            document.getElementById('ultraBack').textContent = data.back.toFixed(1) + ' cm';
+            document.getElementById('ultraLeft').textContent = data.left.toFixed(1) + ' cm';
+            document.getElementById('ultraRight').textContent = data.right.toFixed(1) + ' cm';
+        });
+
+        socket.on('scan_update', (data) => {
+            const angles = [];
+            const ranges = [];
+            for (let i = 0; i < data.ranges.length; i++) {
+                const angle = -180 + (i * 360 / data.ranges.length);
+                if (data.ranges[i] > 0 && data.ranges[i] < 100) {
+                    angles.push(angle);
+                    ranges.push(data.ranges[i]);
+                }
+            }
+            Plotly.newPlot('lidarPlot', [{
+                type: 'scatterpolar',
+                r: ranges,
+                theta: angles,
+                mode: 'markers',
+                marker: { color: '#00d4ff', size: 3, line: { color: '#00d4ff', width: 1 } },
+                name: 'LiDAR Points'
+            }], {
+                polar: {
+                    radialaxis: { range: [0, 10], color: '#888', gridcolor: 'rgba(255,255,255,0.1)' },
+                    angularaxis: { direction: 'clockwise', color: '#888', gridcolor: 'rgba(255,255,255,0.1)' },
+                    bgcolor: 'rgba(0,0,0,0.3)'
+                },
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0)',
+                font: { color: '#ffffff' },
+                showlegend: false,
+                margin: { t: 30, b: 30, l: 50, r: 50 }
+            }, { displayModeBar: false });
+        });
+
+        function sendCommand(command) {
+            socket.emit('control_command', { command: command });
+            console.log('Sent command:', command);
+        }
+
+        let keyPressed = {};
+        let keyTimeout = null;
+        
+        document.addEventListener('keydown', (e) => {
+            if(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+                e.preventDefault();
+            }
+            if (keyPressed[e.key]) return;
+            keyPressed[e.key] = true;
+            if (keyTimeout) clearTimeout(keyTimeout);
+            
+            switch(e.key) {
+                case 'ArrowUp': sendCommand('forward'); break;
+                case 'ArrowDown': sendCommand('backward'); break;
+                case 'ArrowLeft': sendCommand('left'); break;
+                case 'ArrowRight': sendCommand('right'); break;
+                case ' ': sendCommand('stop'); break;
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keyPressed[e.key] = false;
+            if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                keyTimeout = setTimeout(() => { sendCommand('stop'); }, 50);
+            }
+        });
+
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('systemTime').textContent = now.toLocaleTimeString();
+        }, 1000);
+
+        let currentMode = 'autonomous';
+        function toggleMode() {
+            const btn = document.getElementById('modeToggle');
+            const modeStatus = document.getElementById('modeStatus').querySelector('.sensor-number');
+            if (currentMode === 'autonomous') {
+                currentMode = 'manual';
+                btn.textContent = 'Switch to Autonomous';
+                btn.className = 'mode-toggle-btn manual';
+                modeStatus.textContent = '🎮 MANUAL';
+                socket.emit('mode_change', { mode: 'manual' });
+                console.log('Switched to MANUAL mode');
+            } else {
+                currentMode = 'autonomous';
+                btn.textContent = 'Switch to Manual';
+                btn.className = 'mode-toggle-btn';
+                modeStatus.textContent = '🤖 AUTONOMOUS';
+                socket.emit('mode_change', { mode: 'autonomous' });
+                console.log('Switched to AUTONOMOUS mode');
+            }
+        }
+        
+        console.log('🚀 Ground Control Station Dashboard Loaded');
+    </script>
+</body>
+</html>

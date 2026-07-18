@@ -1,0 +1,441 @@
+<?xml version="1.0"?>
+<robot name="my_rover">
+
+  <!-- Base Link (Blue Chassis) -->
+  <link name="base_link">
+    <inertial>
+      <mass value="20.0"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.15" rpy="0 0 0"/>
+      <geometry><box size="0.8 0.5 0.25"/></geometry>
+      <material name="blue"><color rgba="0.2 0.4 0.9 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.15" rpy="0 0 0"/>
+      <geometry><box size="0.8 0.5 0.25"/></geometry>
+    </collision>
+  </link>
+  <gazebo reference="base_link">
+    <material>Gazebo/Blue</material>
+  </gazebo>
+
+  <!-- Solar Panel (Yellow) -->
+  <link name="solar_panel">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.6 0.4 0.02"/></geometry>
+      <material name="yellow"><color rgba="1.0 0.85 0.0 1"/></material>
+    </visual>
+  </link>
+  <joint name="solar_panel_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="solar_panel"/>
+    <origin xyz="0 0 0.29" rpy="0 0 0"/>
+  </joint>
+  <gazebo reference="solar_panel">
+    <material>Gazebo/Yellow</material>
+  </gazebo>
+
+  <!-- Left Wing (Yellow) -->
+  <link name="left_wing">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.3 0.25 0.01"/></geometry>
+      <material name="yellow"><color rgba="1.0 0.85 0.0 1"/></material>
+    </visual>
+  </link>
+  <joint name="left_wing_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="left_wing"/>
+    <origin xyz="0 0.375 0.28" rpy="0 0 0"/>
+  </joint>
+  <gazebo reference="left_wing">
+    <material>Gazebo/Yellow</material>
+  </gazebo>
+
+  <!-- Right Wing (Yellow) -->
+  <link name="right_wing">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry><box size="0.3 0.25 0.01"/></geometry>
+      <material name="yellow"><color rgba="1.0 0.85 0.0 1"/></material>
+    </visual>
+  </link>
+  <joint name="right_wing_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="right_wing"/>
+    <origin xyz="0 -0.375 0.28" rpy="0 0 0"/>
+  </joint>
+  <gazebo reference="right_wing">
+    <material>Gazebo/Yellow</material>
+  </gazebo>
+
+  <!-- Camera (Red) -->
+  <link name="camera_link">
+    <visual>
+      <geometry><box size="0.05 0.08 0.05"/></geometry>
+      <material name="red"><color rgba="1.0 0.0 0.0 1"/></material>
+    </visual>
+  </link>
+  <joint name="camera_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="camera_link"/>
+    <origin xyz="0.42 0 0.18" rpy="0 0 0"/>
+  </joint>
+  <gazebo reference="camera_link">
+    <material>Gazebo/Red</material>
+  </gazebo>
+
+  <!-- Antenna (Orange) -->
+  <link name="antenna">
+    <visual>
+      <geometry><cylinder radius="0.01" length="0.2"/></geometry>
+      <material name="orange"><color rgba="1.0 0.5 0.0 1"/></material>
+    </visual>
+  </link>
+  <joint name="antenna_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="antenna"/>
+    <origin xyz="-0.3 0 0.38" rpy="0 0 0"/>
+  </joint>
+  <gazebo reference="antenna">
+    <material>Gazebo/Orange</material>
+  </gazebo>
+
+  <!-- LiDAR (Black) -->
+  <link name="lidar_link">
+    <visual>
+      <geometry><cylinder radius="0.06" length="0.05"/></geometry>
+      <material name="black"><color rgba="0.1 0.1 0.1 1"/></material>
+    </visual>
+  </link>
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0 0 0.325" rpy="0 0 0"/>
+  </joint>
+  <gazebo reference="lidar_link">
+    <material>Gazebo/Black</material>
+  </gazebo>
+
+  <!-- IMU (Green) -->
+  <link name="imu_link">
+    <visual>
+      <geometry><box size="0.04 0.04 0.02"/></geometry>
+      <material name="green"><color rgba="0.0 1.0 0.0 1"/></material>
+    </visual>
+  </link>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0.1 0.1 0.28" rpy="0 0 0"/>
+  </joint>
+  <gazebo reference="imu_link">
+    <material>Gazebo/Green</material>
+  </gazebo>
+
+  <!-- GPS (Purple) -->
+  <link name="gps_link">
+    <visual>
+      <geometry><box size="0.03 0.03 0.01"/></geometry>
+      <material name="purple"><color rgba="0.6 0.0 0.8 1"/></material>
+    </visual>
+  </link>
+  <joint name="gps_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="gps_link"/>
+    <origin xyz="-0.1 0.1 0.28" rpy="0 0 0"/>
+  </joint>
+  <gazebo reference="gps_link">
+    <material>Gazebo/Purple</material>
+  </gazebo>
+
+  <!-- Ultrasonic Sensors (Cyan) -->
+  <link name="ultrasonic_front">
+    <visual>
+      <geometry><cylinder radius="0.015" length="0.02"/></geometry>
+      <material name="cyan"><color rgba="0.0 1.0 1.0 1"/></material>
+    </visual>
+  </link>
+  <joint name="ultrasonic_front_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="ultrasonic_front"/>
+    <origin xyz="0.4 0 0.15" rpy="0 1.5707 0"/>
+  </joint>
+  <gazebo reference="ultrasonic_front">
+    <material>Gazebo/Turquoise</material>
+  </gazebo>
+
+  <link name="ultrasonic_back">
+    <visual>
+      <geometry><cylinder radius="0.015" length="0.02"/></geometry>
+      <material name="cyan"><color rgba="0.0 1.0 1.0 1"/></material>
+    </visual>
+  </link>
+  <joint name="ultrasonic_back_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="ultrasonic_back"/>
+    <origin xyz="-0.4 0 0.15" rpy="0 1.5707 0"/>
+  </joint>
+  <gazebo reference="ultrasonic_back">
+    <material>Gazebo/Turquoise</material>
+  </gazebo>
+
+  <link name="ultrasonic_left">
+    <visual>
+      <geometry><cylinder radius="0.015" length="0.02"/></geometry>
+      <material name="cyan"><color rgba="0.0 1.0 1.0 1"/></material>
+    </visual>
+  </link>
+  <joint name="ultrasonic_left_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="ultrasonic_left"/>
+    <origin xyz="0 0.25 0.15" rpy="1.5707 0 0"/>
+  </joint>
+  <gazebo reference="ultrasonic_left">
+    <material>Gazebo/Turquoise</material>
+  </gazebo>
+
+  <link name="ultrasonic_right">
+    <visual>
+      <geometry><cylinder radius="0.015" length="0.02"/></geometry>
+      <material name="cyan"><color rgba="0.0 1.0 1.0 1"/></material>
+    </visual>
+  </link>
+  <joint name="ultrasonic_right_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="ultrasonic_right"/>
+    <origin xyz="0 -0.25 0.15" rpy="1.5707 0 0"/>
+  </joint>
+  <gazebo reference="ultrasonic_right">
+    <material>Gazebo/Turquoise</material>
+  </gazebo>
+
+  <!-- 6 WHEELS -->
+  
+  <!-- Front Left Wheel -->
+  <link name="front_left_wheel">
+    <inertial>
+      <mass value="1.5"/>
+      <inertia ixx="0.015" ixy="0.0" ixz="0.0" iyy="0.015" iyz="0.0" izz="0.015"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5707 0 0"/>
+      <geometry><cylinder radius="0.12" length="0.06"/></geometry>
+      <material name="black"><color rgba="0.1 0.1 0.1 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.5707 0 0"/>
+      <geometry><cylinder radius="0.12" length="0.06"/></geometry>
+    </collision>
+  </link>
+  <joint name="front_left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="front_left_wheel"/>
+    <origin xyz="0.25 0.28 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+  <gazebo reference="front_left_wheel">
+    <material>Gazebo/Black</material>
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+
+  <!-- Front Right Wheel -->
+  <link name="front_right_wheel">
+    <inertial>
+      <mass value="1.5"/>
+      <inertia ixx="0.015" ixy="0.0" ixz="0.0" iyy="0.015" iyz="0.0" izz="0.015"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5707 0 0"/>
+      <geometry><cylinder radius="0.12" length="0.06"/></geometry>
+      <material name="black"><color rgba="0.1 0.1 0.1 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.5707 0 0"/>
+      <geometry><cylinder radius="0.12" length="0.06"/></geometry>
+    </collision>
+  </link>
+  <joint name="front_right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="front_right_wheel"/>
+    <origin xyz="0.25 -0.28 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+  <gazebo reference="front_right_wheel">
+    <material>Gazebo/Black</material>
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+
+  <!-- Middle Left Wheel (Powered) -->
+  <link name="middle_left_wheel">
+    <inertial>
+      <mass value="2.0"/>
+      <inertia ixx="0.02" ixy="0.0" ixz="0.0" iyy="0.02" iyz="0.0" izz="0.02"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5707 0 0"/>
+      <geometry><cylinder radius="0.12" length="0.06"/></geometry>
+      <material name="black"><color rgba="0.1 0.1 0.1 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.5707 0 0"/>
+      <geometry><cylinder radius="0.12" length="0.06"/></geometry>
+    </collision>
+  </link>
+  <joint name="middle_left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="middle_left_wheel"/>
+    <origin xyz="0.0 0.28 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+  <gazebo reference="middle_left_wheel">
+    <material>Gazebo/Black</material>
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+
+  <!-- Middle Right Wheel (Powered) -->
+  <link name="middle_right_wheel">
+    <inertial>
+      <mass value="2.0"/>
+      <inertia ixx="0.02" ixy="0.0" ixz="0.0" iyy="0.02" iyz="0.0" izz="0.02"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5707 0 0"/>
+      <geometry><cylinder radius="0.12" length="0.06"/></geometry>
+      <material name="black"><color rgba="0.1 0.1 0.1 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.5707 0 0"/>
+      <geometry><cylinder radius="0.12" length="0.06"/></geometry>
+    </collision>
+  </link>
+  <joint name="middle_right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="middle_right_wheel"/>
+    <origin xyz="0.0 -0.28 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+  <gazebo reference="middle_right_wheel">
+    <material>Gazebo/Black</material>
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+
+  <!-- Rear Left Wheel -->
+  <link name="rear_left_wheel">
+    <inertial>
+      <mass value="1.5"/>
+      <inertia ixx="0.015" ixy="0.0" ixz="0.0" iyy="0.015" iyz="0.0" izz="0.015"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5707 0 0"/>
+      <geometry><cylinder radius="0.12" length="0.06"/></geometry>
+      <material name="black"><color rgba="0.1 0.1 0.1 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.5707 0 0"/>
+      <geometry><cylinder radius="0.12" length="0.06"/></geometry>
+    </collision>
+  </link>
+  <joint name="rear_left_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="rear_left_wheel"/>
+    <origin xyz="-0.25 0.28 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+  <gazebo reference="rear_left_wheel">
+    <material>Gazebo/Black</material>
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+
+  <!-- Rear Right Wheel -->
+  <link name="rear_right_wheel">
+    <inertial>
+      <mass value="1.5"/>
+      <inertia ixx="0.015" ixy="0.0" ixz="0.0" iyy="0.015" iyz="0.0" izz="0.015"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="1.5707 0 0"/>
+      <geometry><cylinder radius="0.12" length="0.06"/></geometry>
+      <material name="black"><color rgba="0.1 0.1 0.1 1"/></material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="1.5707 0 0"/>
+      <geometry><cylinder radius="0.12" length="0.06"/></geometry>
+    </collision>
+  </link>
+  <joint name="rear_right_wheel_joint" type="continuous">
+    <parent link="base_link"/>
+    <child link="rear_right_wheel"/>
+    <origin xyz="-0.25 -0.28 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+  </joint>
+  <gazebo reference="rear_right_wheel">
+    <material>Gazebo/Black</material>
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+
+  <!-- Gazebo Differential Drive Plugin -->
+  <gazebo>
+    <plugin name="diff_drive" filename="libgazebo_ros_diff_drive.so">
+      <update_rate>50</update_rate>
+      <left_joint>middle_left_wheel_joint</left_joint>
+      <right_joint>middle_right_wheel_joint</right_joint>
+      <wheel_separation>0.56</wheel_separation>
+      <wheel_diameter>0.24</wheel_diameter>
+      <max_wheel_torque>30</max_wheel_torque>
+      <command_topic>cmd_vel</command_topic>
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <publish_wheel_tf>true</publish_wheel_tf>
+      <odometry_topic>odom</odometry_topic>
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>base_link</robot_base_frame>
+    </plugin>
+  </gazebo>
+
+  <!-- Camera Plugin -->
+  <gazebo reference="camera_link">
+    <sensor type="camera" name="camera">
+      <update_rate>30</update_rate>
+      <camera>
+        <horizontal_fov>1.3962634</horizontal_fov>
+        <image><width>640</width><height>480</height></image>
+        <clip><near>0.02</near><far>300</far></clip>
+      </camera>
+      <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+        <cameraName>front_camera</cameraName>
+        <imageTopicName>image_raw</imageTopicName>
+        <frameName>camera_link</frameName>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <!-- LiDAR Plugin -->
+  <gazebo reference="lidar_link">
+    <sensor type="ray" name="lidar">
+      <visualize>true</visualize>
+      <update_rate>10</update_rate>
+      <ray>
+        <scan>
+          <horizontal><samples>360</samples><min_angle>-3.14159</min_angle><max_angle>3.14159</max_angle></horizontal>
+        </scan>
+        <range><min>0.2</min><max>10.0</max></range>
+      </ray>
+      <plugin name="gazebo_ros_laser" filename="libgazebo_ros_ray_sensor.so">
+        <topicName>scan</topicName>
+        <frameName>lidar_link</frameName>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+</robot>
