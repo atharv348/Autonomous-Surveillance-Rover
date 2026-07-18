@@ -196,6 +196,28 @@ due to GitHub's file size limits — available on request or via Git LFS.
 
 ---
 
+## 📸 Media
+
+![Rover project photo](media/rover_01.jpeg)
+
+![Rover project photo](media/rover_02.jpeg)
+
+![Rover project photo](media/rover_03.jpeg)
+
+![Rover project photo](media/rover_04.jpeg)
+
+![Rover project photo](media/rover_05.jpeg)
+
+![Rover project photo](media/rover_06.jpeg)
+
+![Rover project photo](media/rover_07.jpeg)
+
+![Rover project photo](media/rover_08.jpeg)
+
+![Rover project photo](media/rover_09.jpeg)
+
+---
+
 ## 📊 Status
 
 🚧 Work in progress — currently refining navigation robustness across
