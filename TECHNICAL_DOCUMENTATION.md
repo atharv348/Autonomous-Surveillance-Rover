@@ -1,161 +1,178 @@
-# Technical Documentation — Internship Assessment
+# Internship Assessment — What I Built
 
-Author: Atharv Joshi
-Platform: ROS 2 Humble (Docker), Gazebo Classic, Nav2, SLAM Toolbox
+**By Atharv Joshi**
+Stack: ROS 2 Humble (in Docker), Gazebo, Nav2, SLAM Toolbox, and plain Python for the last one.
 
----
-
-# Task 1 — Autonomous Navigation with Dynamic Obstacle Replanning
-
-## Approach
-
-A custom differential-drive rover was configured with a simulated sensor
-suite (LiDAR, camera, IMU, GPS, ultrasonic) defined via URDF/Xacro, spawned
-into a Gazebo world containing static obstacles. Autonomous navigation is
-handled by the ROS 2 Navigation Stack (Nav2), with live mapping provided by
-SLAM Toolbox in asynchronous online mode.
-
-## Pipeline
-
-1. **Simulation** — Gazebo publishes LiDAR scans on `/scan` and wheel
-   odometry on `/odom`, with the `map -> odom -> base_link` transform tree
-   completed by SLAM Toolbox and the differential-drive plugin.
-2. **Mapping** — SLAM Toolbox builds a live occupancy grid from LiDAR as the
-   robot explores, publishing the `map` frame and `/map` topic.
-3. **Navigation** — Nav2's planner (NavFn/GridBased) computes a global path
-   over the global costmap; the DWB controller follows it using the local
-   costmap for immediate obstacle avoidance.
-4. **Dynamic replanning** — When a new obstacle is introduced into the
-   robot's path at runtime (spawned live in Gazebo), the LiDAR detects it,
-   the obstacle layer marks it into both costmaps, and Nav2 automatically
-   recomputes a valid path around it — with no manual intervention.
-
-## Key implementation decisions
-
-- **SLAM instead of pre-built map + AMCL** — chosen so the system maps and
-  navigates unknown terrain simultaneously, matching the "diverse terrain"
-  problem statement.
-- **Controller frequency tuning** — reduced from 20 Hz to 5 Hz and planner
-  from 20 Hz to 2 Hz to run reliably on constrained compute (containerised
-  environment), preventing control-loop starvation and goal aborts.
-- **LiDAR plugin fix** — the sensor plugin was corrected to publish
-  `sensor_msgs/LaserScan` on `/scan` (using the modern
-  `libgazebo_ros_ray_sensor` remapping), which the costmaps require.
-- **Larger local costmap (5x5 m)** — gives the controller room to plan a
-  detour once a new obstacle is detected.
-
-## Result
-
-The rover autonomously plans and follows a path to a commanded goal,
-detects obstacles introduced mid-navigation, updates its costmap, replans,
-and reaches the goal. Confirmed by Nav2 logs (`Reached the goal! / Goal
-succeeded`).
+A quick note on the setup: I ran everything inside a ROS 2 Humble Docker container on WSL2, since my fresh Ubuntu install was 26.04 and the packages I needed line up with Humble. GUI apps (Gazebo, RViz) forward to Windows through WSLg. Worked, but it's compute-limited, which shaped a few of my decisions below.
 
 ---
 
-# Task 2 — Custom ROS 2 Navigation Monitoring Node (`nav_monitor`)
+## Task 1 — Autonomous Navigation with Dynamic Obstacle Replanning
 
-## Approach
+### What I was going for
 
-A standalone ROS 2 Python node that observes the Nav2 navigation action and
-reports live status, without interfering with navigation itself.
+Get the rover to drive itself to a goal, and if a new obstacle shows up in
+its path partway there, notice it, replan, and still reach the goal — no
+hand-holding.
 
-## Implementation
+### How I built it
 
-The node subscribes to three sources:
+I've got a differential-drive rover with a full sensor suite (LiDAR, camera,
+IMU, GPS, ultrasonic) defined in URDF/Xacro, spawned into a Gazebo world with
+some obstacles. Navigation is Nav2, and instead of feeding it a pre-made map
+I run SLAM Toolbox live, so it maps and navigates at the same time. That felt
+closer to the "diverse terrain" spirit of the problem — the robot doesn't get
+to know the world ahead of time.
 
-1. **`/goal_pose`** (`PoseStamped`) — captures the target position (x, y)
-   the moment a goal is issued.
-2. **`/navigate_to_pose/_action/feedback`** — Nav2's action feedback, which
-   provides `distance_remaining` live while the robot drives.
-3. **`/navigate_to_pose/_action/status`** — the action goal-status array,
-   mapped to human-readable states.
+The flow is basically: Gazebo publishes the LiDAR scan and odometry, SLAM
+Toolbox builds the map and fills in the `map -> odom -> base_link` transforms,
+Nav2's planner lays down a global path, and the DWB controller drives it while
+watching the local costmap for anything in the way. When I drop a new box in
+front of the rover mid-drive, the LiDAR picks it up, it gets stamped into the
+costmap, and Nav2 just quietly reroutes around it.
 
-A 1 Hz timer prints a clean status block:
+### Stuff I ran into (and fixed)
+
+Honestly this task was mostly debugging, not writing new code:
+
+- **The LiDAR wasn't publishing where Nav2 expected.** The robot's URDF had
+  an old-style laser plugin config (`<topicName>`, `<frameName>` tags) that
+  the modern `libgazebo_ros_ray_sensor` plugin just ignores — so it was
+  silently dumping PointCloud2 on the wrong topic instead of LaserScan on
+  `/scan`. Fixed the plugin block to use the `<ros><remapping>` +
+  `<output_type>` format and suddenly SLAM and the costmaps could see.
+
+- **A plugin-name typo in the Nav2 params** — behaviors were written as
+  `nav2_behaviors::Spin` (C++ style) when pluginlib wanted
+  `nav2_behaviors/Spin`. One character, but it aborted the whole
+  behavior_server on startup.
+
+- **Everything kept aborting with "failed to make progress."** Turned out the
+  container couldn't hit the 20 Hz control loop, so Nav2 gave up. Dropped the
+  controller to 5 Hz and the planner to 2 Hz and it ran fine. Not glamorous,
+  but that's real embedded-ish constraint work.
+
+- **A leftover reactive-avoidance node kept fighting Nav2** for control of
+  `/cmd_vel` — it respawns every time Gazebo launches, so I got very used to
+  `pkill`-ing it before every run.
+
+### Where it landed
+
+It works. Nav2's own logs say it plainly: `Reached the goal! / Goal
+succeeded`. The rover drives to the target, and when I drop an obstacle in
+its way it reroutes and still gets there.
+
+---
+
+## Task 2 — The `nav_monitor` Node
+
+### What it needed to do
+
+Write a ROS 2 node that watches whatever navigation is happening and prints
+the current goal, how far's left, and the status — NAVIGATING, REPLANNING,
+SUCCEEDED, or FAILED.
+
+### How I did it
+
+It's a small Python node that just listens — it never sends any commands, so
+it can run alongside Nav2 without getting in the way. It subscribes to three
+things:
+
+- `/goal_pose` to grab the goal coordinates the moment I send one
+- the `navigate_to_pose` action **feedback**, which hands me
+  `distance_remaining` for free while the robot drives
+- the action **status**, which I map to the four readable states
+
+Then a 1-second timer just prints a tidy block.
+
+The one bit I had to think about was REPLANNING — Nav2 doesn't hand you a
+"replanning" status directly. So I infer it: if the remaining distance
+suddenly jumps *up* (the path got longer because it rerouted around
+something), I flag REPLANNING for a moment before it settles back to
+NAVIGATING. Worked out nicely.
+
+One small gotcha I found: if you start the monitor *after* sending the goal,
+it misses the `/goal_pose` message and shows "(none)" for the coordinates.
+Start it first, then send the goal, and everything shows up.
+
+### Actual output from a run
 
 ```
-Current Goal:       (x, y)
-Remaining Distance: D m
-Status:             NAVIGATING / REPLANNING / SUCCEEDED / FAILED
+New goal received: (2.60, 3.00)
+------------------------------------------------
+Current Goal:       (2.60, 3.00)
+Remaining Distance: 0.20 m
+Status:             NAVIGATING
+------------------------------------------------
+Current Goal:       (2.60, 3.00)
+Remaining Distance: 0.00 m
+Status:             SUCCEEDED
 ```
 
-## Status logic
-
-- `STATUS_EXECUTING / ACCEPTED` -> **NAVIGATING**
-- `STATUS_SUCCEEDED` -> **SUCCEEDED** (distance forced to 0.00)
-- `STATUS_ABORTED / CANCELED` -> **FAILED**
-- **REPLANNING** is inferred: when `distance_remaining` suddenly increases
-  (the path got longer because Nav2 re-routed around a new obstacle), the
-  node reports REPLANNING briefly before returning to NAVIGATING.
-
-## Key decisions
-
-- **Read-only design** — the monitor only subscribes; it never publishes to
-  `/cmd_vel` or interferes with Nav2, so it is safe to run alongside live
-  navigation.
-- **Warm-start goal capture** — starting the monitor before issuing the goal
-  ensures the `/goal_pose` message is captured so coordinates display.
-
-## Result
-
-Verified live: the node reports IDLE -> NAVIGATING -> (REPLANNING) ->
-SUCCEEDED with the correct goal coordinates and a decreasing distance,
-matching Nav2's own success logs. It also reports FAILED correctly when a
-goal is unreachable.
+And from a longer run it also caught the full arc — IDLE, then NAVIGATING
+with the distance ticking down from 1.77 m, brief REPLANNING flickers when it
+rerouted, and finally SUCCEEDED at 0.00 m. All four states, exactly as asked.
 
 ---
 
-# Task 3 — 6-Axis Robot Toolpath Generation for a Cone Surface
+## Task 3 — Cone Surface Toolpath for a 6-Axis Arm
 
-## Approach
+### The task
 
-Generate a continuous toolpath that spirals up the surface of a cone,
-convert each Cartesian point into 6-axis robot joint coordinates using
-inverse kinematics, and export the trajectory to CSV.
+Make a toolpath that runs along the surface of a cone, turn it into 6-axis
+robot joint values, and export it as a CSV with time plus the six joints.
 
-## Method
+### My approach
 
-1. **Cone geometry (parametric)** — the cone stands on its base with the
-   apex up. At height fraction `f` (0 at base, 1 at apex), the radius is
-   `R * (1 - f)` and the height is `H * f`. Sweeping the angle while climbing
-   produces a helix that wraps `NUM_TURNS` times up the surface. This gives a
-   continuous, evenly-distributed path over the cone.
+This one's pure Python, no ROS needed, which was a nice change of pace.
 
-2. **Path generation** — 300 points are sampled along the helix, each a
-   Cartesian `(x, y, z)` tool-tip position on the cone surface, offset to the
-   cone's location in the robot's workspace.
+I defined the cone parametrically — as you climb from base to apex, the radius
+shrinks to zero and the height grows. If you sweep the angle around while
+climbing, you trace a **helix** spiraling up the cone's surface. That's my
+continuous toolpath: 300 points wrapping several times up the cone.
 
-3. **Inverse kinematics** — a standard 6-DOF UR5 arm is modelled inline
-   (link translations/orientations/axes) using `ikpy`. For each Cartesian
-   point, `chain.inverse_kinematics()` solves the six joint angles that place
-   the tool tip there. Each solve is warm-started from the previous solution,
-   producing a smooth, continuous joint trajectory.
+For the "6-axis" part, I needed a real arm to solve against, so I modeled a
+**UR5** (standard 6-DOF arm) inline using `ikpy`. For each point on the
+helix, I run inverse kinematics to get the six joint angles that put the tool
+tip there. I warm-start each solve from the previous answer, so the joint
+values flow smoothly instead of jumping around — makes it an actually
+executable trajectory.
 
-4. **CSV export** — each point is written as a timestamped row:
-   `Time, Joint1, Joint2, Joint3, Joint4, Joint5, Joint6`, with time
-   incrementing by a fixed step. The cone surface points are also saved
-   separately as reference geometry.
+Then I write it all to CSV in the required `Time, Joint1...Joint6` format, and
+also dump the raw cone points separately as reference geometry.
 
-## Key decisions
+One honest note: I solved position-only IK, so the tool tip follows the
+surface but I didn't constrain wrist orientation (Joint5/6 sit near zero).
+For a surface-following path that's fine; if you needed the tool held
+perpendicular to the surface you'd add an orientation constraint, but the task
+didn't call for it.
 
-- **UR5 as the 6-axis model** — a well-documented, widely-used 6-DOF arm;
-  the task permits any available 6-axis robot.
-- **Position-based IK** — the tool tip tracks the surface path; wrist
-  orientation is left free (Joint5/6 near zero), which is sufficient for a
-  surface-following toolpath. Full surface-normal orientation could be added
-  by constraining `target_orientation` if perpendicular tool contact were
-  required.
-- **Warm-starting** — passing the previous solution as the initial guess
-  keeps consecutive joint values continuous (no sudden jumps), giving a
-  physically realistic, executable trajectory.
+### Actual output
 
-## Deliverables produced
+Straight from the generated CSV:
 
-- `cone_toolpath.py` — the generation script
-- `cone_toolpath.csv` — Time + 6 joint values (300 rows)
-- `cone_geometry.csv` — the cone surface reference points
+```
+Time,Joint1,Joint2,Joint3,Joint4,Joint5,Joint6
+0.0,-0.199781,-0.435773,1.618336,2.014967,0.0,0.0
+0.1,-0.166012,-0.439145,1.62372,2.012359,0.0,0.0
+0.2,-0.133237,-0.444225,1.635224,2.00716,0.0,0.0
+0.3,-0.101652,-0.450921,1.65269,1.999538,0.0,0.0
+```
 
-## Result
+You can see the joints drifting smoothly point to point, which is exactly
+what the warm-starting was for.
 
-A continuous, smooth 300-point 6-axis joint trajectory following a helical
-path over the cone surface, exported in the required CSV format.
+**Files it produces:**
+- `cone_toolpath.py` — the script
+- `cone_toolpath.csv` — 300 rows, time + 6 joints
+- `cone_geometry.csv` — the cone surface points
+
+---
+
+## Wrap-up
+
+All three are working. Task 1 and 2 run together in the same live stack — the
+rover navigates and replans while `nav_monitor` reports what it's doing — and
+Task 3 stands on its own as a Python script that spits out the CSV. Most of my
+time honestly went into the Gazebo/Nav2 plumbing for Task 1; the monitor and
+the cone toolpath came together pretty cleanly once that foundation worked.
