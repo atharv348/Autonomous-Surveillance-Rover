@@ -3,7 +3,8 @@
 An autonomous ground rover built for waypoint navigation, SLAM-based mapping, real-time visual surveillance, and 6-axis manipulator toolpath generation — designed with resource-constrained compute in mind.
 
 Author: **Atharv Joshi**  
-Stack: ROS 2 Humble (in Docker / WSL2), Gazebo Classic, Nav2, SLAM Toolbox, Python
+Stack: ROS 2 Humble (in Docker / WSL2), Gazebo Classic, Nav2, SLAM Toolbox, Python  
+📹 **Video Demonstration (Google Drive):** [Watch Video Demonstration](https://drive.google.com/drive/u/0/folders/1duk6e5Rs1KtrupEqTI7CTjME6bO1q5Mo)
 
 ---
 
