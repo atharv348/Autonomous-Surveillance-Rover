@@ -153,17 +153,14 @@ Straight from the generated CSV:
 
 ```
 Time,Joint1,Joint2,Joint3,Joint4,Joint5,Joint6
-0.0,0.000000,-0.341630,1.043403,-0.701773,0.000000,0.000000
-0.1,0.039307,-0.343485,1.052223,-0.708738,0.000000,0.000000
-0.2,0.078380,-0.349442,1.070737,-0.721295,0.000000,0.000000
-0.3,0.117146,-0.359199,1.098380,-0.739181,0.000000,0.000000
+0.0,-0.199781,-0.435773,1.618336,2.014967,0.0,0.0
+0.1,-0.166012,-0.439145,1.62372,2.012359,0.0,0.0
+0.2,-0.133237,-0.444225,1.635224,2.00716,0.0,0.0
+0.3,-0.101652,-0.450921,1.65269,1.999538,0.0,0.0
 ```
 
 You can see the joints drifting smoothly point to point, which is exactly
-what the warm-starting was for. (Note: because inverse kinematics can have
-more than one valid solution for the same point, re-running the script may
-produce a different but equally correct set of joint values — the tool tip
-still follows the same cone path.)
+what the warm-starting was for.
 
 **Files it produces:**
 - `cone_toolpath.py` — the script
