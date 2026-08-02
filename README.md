@@ -4,7 +4,7 @@ An autonomous ground rover built for waypoint navigation, SLAM-based mapping, re
 
 Author: **Atharv Joshi**  
 Stack: ROS 2 Humble (in Docker / WSL2), Gazebo Classic, Nav2, SLAM Toolbox, Python  
-📹 **Video Demonstration (Google Drive):** [Watch Video Demonstration](https://drive.google.com/drive/u/0/folders/1duk6e5Rs1KtrupEqTI7CTjME6bO1q5Mo)
+📹 **Video Demonstration (Google Drive):** [Watch Video Demonstration](https://drive.google.com/file/d/1M3hGquUAY9mvO_JIKQ4hy9XdtxYN4xCo/view?usp=sharing)
 
 ---
 

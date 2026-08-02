@@ -4,7 +4,7 @@
 Stack: ROS 2 Humble (in Docker), Gazebo, Nav2, SLAM Toolbox, and plain Python for the last one.
 
 📹 **Video Demonstration (Google Drive):**  
-[Watch Video Demonstration](https://drive.google.com/drive/u/0/folders/1duk6e5Rs1KtrupEqTI7CTjME6bO1q5Mo)
+[Watch Video Demonstration](https://drive.google.com/file/d/1M3hGquUAY9mvO_JIKQ4hy9XdtxYN4xCo/view?usp=sharing)
 
 A quick note on the setup: I ran everything inside a ROS 2 Humble Docker container on WSL2, since my fresh Ubuntu install was 26.04 and the packages I needed line up with Humble. GUI apps (Gazebo, RViz) forward to Windows through WSLg. Worked, but it's compute-limited, which shaped a few of my decisions below.
 
